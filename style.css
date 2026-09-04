@@ -186,6 +186,7 @@ input:focus, select:focus {
 
 .nav-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .dot-savings { background: var(--savings); }
+.dot-gym { background: var(--warn); }
 
 .new-business-btn {
   margin-top: auto;
@@ -279,11 +280,11 @@ input:focus, select:focus {
 .recipe-sub { font-size: 13px; color: var(--ink-soft); margin: -8px 0 16px; }
 .recipe-list { max-height: 260px; overflow-y: auto; margin-bottom: 4px; }
 .recipe-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
   padding: 8px 0; border-bottom: 1px solid var(--line);
 }
 .recipe-row:last-child { border-bottom: none; }
-.recipe-row-info { font-size: 13px; }
+.recipe-row-info { font-size: 13px; padding-top: 6px; }
 .recipe-row-info .rname { font-weight: 600; display: block; }
 .recipe-row-info .rmeta { color: var(--ink-soft); font-size: 12px; }
 .recipe-row input[type="number"] { width: 84px; text-align: right; padding: 8px 10px; }
@@ -294,6 +295,82 @@ input:focus, select:focus {
   padding: 12px 16px; margin: 14px 0 18px;
   font-weight: 700; color: var(--supply);
 }
+
+.recipe-detail-input {
+  width: 64px !important; padding: 6px 8px !important; font-size: 12px !important;
+  margin-top: 5px; display: block; margin-left: auto;
+}
+.recipe-detail-label { font-size: 10px; color: var(--ink-soft); text-align: right; margin-top: 2px; }
+
+/* ============ GYM ============ */
+.gym-schedule-card { padding-bottom: 16px; margin-bottom: 20px; }
+
+.weekday-toggle { display: flex; gap: 8px; padding: 4px 20px 10px; }
+.wday-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-soft); font-weight: 700; font-size: 13px; cursor: pointer;
+  transition: background .15s var(--ease), color .15s var(--ease), transform .15s var(--ease);
+}
+.wday-btn:hover { transform: scale(1.06); }
+.wday-btn.active { background: var(--warn); border-color: var(--warn); color: white; }
+
+.routines-list { padding: 0 20px 14px; display: flex; flex-direction: column; gap: 8px; }
+.routine-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--warn-soft); border-radius: var(--radius-s);
+  padding: 10px 14px;
+}
+.routine-item .rname { font-weight: 600; font-size: 13px; display: block; }
+.routine-item .rnotes { font-size: 12px; color: var(--ink-soft); display: block; margin-top: 2px; }
+.routine-day-tag {
+  font-size: 11px; font-weight: 700; color: var(--warn);
+  background: var(--surface); padding: 3px 9px; border-radius: 20px; flex-shrink: 0;
+}
+
+.calendar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 4px;
+}
+.calendar-title { font-weight: 700; font-size: 14px; text-transform: capitalize; }
+.calendar-header .icon-btn { color: var(--ink-soft); font-size: 18px; }
+.calendar-header .icon-btn:hover { background: var(--bg); color: var(--ink); }
+
+.calendar-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  padding: 8px 14px 0; text-align: center;
+  font-size: 11px; color: var(--ink-soft); font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 4px; padding: 6px 14px 10px;
+}
+.cal-day {
+  aspect-ratio: 1; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: var(--ink);
+  background: var(--bg); border: 1.5px solid transparent;
+  cursor: pointer; position: relative;
+  transition: transform .12s var(--ease), border-color .12s var(--ease);
+}
+.cal-day:hover { transform: scale(1.05); }
+.cal-day.empty { visibility: hidden; cursor: default; }
+.cal-day.today { border-color: var(--ink); }
+.cal-day.scheduled { background: var(--warn-soft); }
+.cal-day.done { background: var(--accent-soft); color: var(--accent); }
+.cal-day.missed { background: var(--danger-soft); color: var(--danger); }
+.cal-day .cal-dot { width: 4px; height: 4px; border-radius: 50%; margin-top: 2px; }
+
+.calendar-legend {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  padding: 4px 20px 18px; font-size: 11px; color: var(--ink-soft);
+}
+.calendar-legend span { display: flex; align-items: center; gap: 5px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot-done { background: var(--accent); }
+.dot-missed { background: var(--danger); }
+.dot-pending { background: var(--warn); }
 
 table { width: 100%; border-collapse: collapse; }
 th {
