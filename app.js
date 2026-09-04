@@ -16,6 +16,12 @@ let gymSchedule = [];
 let gymRoutines = [];
 let gymLogs = {}; // { "YYYY-MM-DD": true/false }
 let calendarDate = new Date();
+let editingProductId = null;
+let editingSaleId = null;
+let editingSupplierId = null;
+let editingSupplyId = null;
+let editingSavingId = null;
+let profitChartInstance = null;
 
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -104,10 +110,11 @@ function bindEvents() {
 
   document.getElementById("new-business-btn").addEventListener("click", () => openModal("modal-business"));
   document.getElementById("empty-new-business-btn").addEventListener("click", () => openModal("modal-business"));
-  document.getElementById("add-product-btn").addEventListener("click", () => openModal("modal-product"));
+  document.getElementById("add-product-btn").addEventListener("click", () => openProductModal());
   document.getElementById("add-sale-btn").addEventListener("click", () => openSaleModal());
-  document.getElementById("add-saving-btn").addEventListener("click", () => openModal("modal-saving"));
-  document.getElementById("add-supplier-btn").addEventListener("click", () => openModal("modal-supplier"));
+  document.getElementById("delete-business-btn").addEventListener("click", deleteCurrentBusiness);
+  document.getElementById("add-saving-btn").addEventListener("click", () => openSavingModal());
+  document.getElementById("add-supplier-btn").addEventListener("click", () => openSupplierModal());
   document.getElementById("add-supply-btn").addEventListener("click", () => openSupplyModal());
   document.getElementById("recipe-apply-btn").addEventListener("click", applyRecipeCostToProduct);
   document.getElementById("add-routine-btn").addEventListener("click", () => openModal("modal-routine"));
@@ -136,11 +143,11 @@ function bindEvents() {
   });
 
   document.getElementById("form-business").addEventListener("submit", handleCreateBusiness);
-  document.getElementById("form-product").addEventListener("submit", handleCreateProduct);
-  document.getElementById("form-sale").addEventListener("submit", handleCreateSale);
-  document.getElementById("form-saving").addEventListener("submit", handleCreateSaving);
-  document.getElementById("form-supplier").addEventListener("submit", handleCreateSupplier);
-  document.getElementById("form-supply").addEventListener("submit", handleCreateSupply);
+  document.getElementById("form-product").addEventListener("submit", handleSaveProduct);
+  document.getElementById("form-sale").addEventListener("submit", handleSaveSale);
+  document.getElementById("form-saving").addEventListener("submit", handleSaveSaving);
+  document.getElementById("form-supplier").addEventListener("submit", handleSaveSupplier);
+  document.getElementById("form-supply").addEventListener("submit", handleSaveSupply);
   document.getElementById("form-routine").addEventListener("submit", handleCreateRoutine);
 
   document.querySelectorAll("#saving-type-toggle .seg-btn").forEach(btn => {
@@ -170,15 +177,35 @@ function openModal(id) {
 function closeModal() {
   document.getElementById("modal-overlay").classList.add("hidden");
   document.querySelectorAll(".modal form").forEach(f => f.reset());
+  editingProductId = null;
+  editingSaleId = null;
+  editingSupplierId = null;
+  editingSupplyId = null;
+  editingSavingId = null;
+  document.getElementById("input-sale-product").disabled = false;
 }
 
-function openSaleModal() {
+function openSaleModal(sale = null) {
   const select = document.getElementById("input-sale-product");
   select.innerHTML = products.map(p => `<option value="${p.id}">${escapeHtml(p.name)} — ${fmt(p.price)}</option>`).join("");
   if (products.length === 0) {
     select.innerHTML = `<option value="">Agrega un producto primero</option>`;
   }
-  document.getElementById("input-sale-date").valueAsDate = new Date();
+
+  if (sale) {
+    editingSaleId = sale.id;
+    document.getElementById("modal-sale-title").textContent = "Editar venta";
+    select.value = sale.product_id || "";
+    select.disabled = true; // el producto de una venta ya pasada no se cambia, solo cantidad/fecha/nota
+    document.getElementById("input-sale-qty").value = sale.quantity;
+    document.getElementById("input-sale-date").value = sale.sale_date;
+    document.getElementById("input-sale-note").value = sale.note || "";
+  } else {
+    editingSaleId = null;
+    document.getElementById("modal-sale-title").textContent = "Registrar venta";
+    select.disabled = false;
+    document.getElementById("input-sale-date").valueAsDate = new Date();
+  }
   openModal("modal-sale");
 }
 
@@ -253,6 +280,24 @@ async function handleCreateBusiness(e) {
   showView("business", data.id);
 }
 
+async function deleteCurrentBusiness() {
+  const business = businesses.find(b => b.id === currentBusinessId);
+  if (!business) return;
+  if (!confirm(`¿Eliminar "${business.name}" junto con todos sus productos, ventas, proveedores e insumos? Esto no se puede deshacer.`)) return;
+
+  const { error } = await supabaseClient.from("businesses").delete().eq("id", currentBusinessId);
+  if (error) { alert("No se pudo eliminar el negocio: " + error.message); return; }
+
+  businesses = businesses.filter(b => b.id !== currentBusinessId);
+  currentBusinessId = null;
+  renderSidebar();
+  if (businesses.length > 0) {
+    showView("business", businesses[0].id);
+  } else {
+    showView("empty");
+  }
+}
+
 // ============================================
 // PRODUCTOS Y VENTAS
 // ============================================
@@ -310,12 +355,24 @@ function renderBusinessView() {
       <td class="num">${fmt(p.cost)}</td>
       <td class="num">${fmt(p.price)}</td>
       <td class="num ${margin >= 0 ? 'positive' : 'negative'}">${fmt(margin)}</td>
-      <td><button class="action-btn" data-recipe-product="${p.id}">Receta</button></td>
+      <td>
+        <div class="row-actions">
+          <button class="action-btn" data-recipe-product="${p.id}">Receta</button>
+          <button class="icon-action" data-edit-product="${p.id}" title="Editar">✏️</button>
+          <button class="icon-action danger" data-delete-product="${p.id}" title="Eliminar">🗑</button>
+        </div>
+      </td>
     </tr>`;
   }).join("");
 
   prodBody.querySelectorAll("[data-recipe-product]").forEach(btn => {
     btn.addEventListener("click", () => openRecipeModal(btn.dataset.recipeProduct));
+  });
+  prodBody.querySelectorAll("[data-edit-product]").forEach(btn => {
+    btn.addEventListener("click", () => openProductModal(products.find(p => p.id === btn.dataset.editProduct)));
+  });
+  prodBody.querySelectorAll("[data-delete-product]").forEach(btn => {
+    btn.addEventListener("click", () => deleteProduct(btn.dataset.deleteProduct));
   });
 
   const saleBody = document.getElementById("sales-table-body");
@@ -327,55 +384,160 @@ function renderBusinessView() {
       <td>${escapeHtml(s.product_name)}</td>
       <td class="num">${s.quantity}</td>
       <td class="num ${saleProfit >= 0 ? 'positive' : 'negative'}">${fmt(saleProfit)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-action" data-edit-sale="${s.id}" title="Editar">✏️</button>
+          <button class="icon-action danger" data-delete-sale="${s.id}" title="Eliminar">🗑</button>
+        </div>
+      </td>
     </tr>`;
   }).join("");
+
+  saleBody.querySelectorAll("[data-edit-sale]").forEach(btn => {
+    btn.addEventListener("click", () => openSaleModal(sales.find(s => s.id === btn.dataset.editSale)));
+  });
+  saleBody.querySelectorAll("[data-delete-sale]").forEach(btn => {
+    btn.addEventListener("click", () => deleteSale(btn.dataset.deleteSale));
+  });
+
+  renderProfitChart();
 }
 
-async function handleCreateProduct(e) {
+function renderProfitChart() {
+  const canvas = document.getElementById("profit-chart");
+  document.getElementById("chart-empty").classList.toggle("hidden", sales.length > 0);
+  canvas.classList.toggle("hidden", sales.length === 0);
+  if (sales.length === 0) {
+    if (profitChartInstance) { profitChartInstance.destroy(); profitChartInstance = null; }
+    return;
+  }
+
+  // Agrupa ganancia por mes (YYYY-MM)
+  const monthly = {};
+  sales.forEach(s => {
+    const key = s.sale_date.slice(0, 7); // "2026-09"
+    const p = (s.unit_price - s.unit_cost) * s.quantity;
+    monthly[key] = (monthly[key] || 0) + p;
+  });
+  const sortedKeys = Object.keys(monthly).sort();
+  const labels = sortedKeys.map(k => {
+    const [y, m] = k.split("-");
+    return new Date(y, m - 1, 1).toLocaleDateString("es-MX", { month: "short", year: "2-digit" });
+  });
+  const data = sortedKeys.map(k => monthly[k]);
+
+  if (profitChartInstance) profitChartInstance.destroy();
+  profitChartInstance = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Ganancia",
+        data,
+        backgroundColor: "#2E9E7B",
+        borderRadius: 6,
+        maxBarThickness: 40
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { callback: (v) => "$" + v } }
+      }
+    }
+  });
+}
+
+function openProductModal(product = null) {
+  if (product) {
+    editingProductId = product.id;
+    document.getElementById("modal-product-title").textContent = "Editar producto";
+    document.getElementById("input-product-name").value = product.name;
+    document.getElementById("input-product-cost").value = product.cost;
+    document.getElementById("input-product-price").value = product.price;
+  } else {
+    editingProductId = null;
+    document.getElementById("modal-product-title").textContent = "Nuevo producto";
+  }
+  openModal("modal-product");
+}
+
+async function handleSaveProduct(e) {
   e.preventDefault();
   const name = document.getElementById("input-product-name").value.trim();
   const cost = parseFloat(document.getElementById("input-product-cost").value);
   const price = parseFloat(document.getElementById("input-product-price").value);
 
-  const { data, error } = await supabaseClient
-    .from("products")
-    .insert({ business_id: currentBusinessId, name, cost, price })
-    .select()
-    .single();
-  if (error) { alert("No se pudo guardar el producto: " + error.message); return; }
-  products.push(data);
+  if (editingProductId) {
+    const { data, error } = await supabaseClient
+      .from("products").update({ name, cost, price }).eq("id", editingProductId).select().single();
+    if (error) { alert("No se pudo actualizar el producto: " + error.message); return; }
+    const idx = products.findIndex(p => p.id === editingProductId);
+    if (idx !== -1) products[idx] = data;
+  } else {
+    const { data, error } = await supabaseClient
+      .from("products").insert({ business_id: currentBusinessId, name, cost, price }).select().single();
+    if (error) { alert("No se pudo guardar el producto: " + error.message); return; }
+    products.push(data);
+  }
   renderBusinessView();
   closeModal();
 }
 
-async function handleCreateSale(e) {
-  e.preventDefault();
-  const productId = document.getElementById("input-sale-product").value;
-  const product = products.find(p => p.id === productId);
-  if (!product) { alert("Elige un producto válido."); return; }
+async function deleteProduct(id) {
+  const product = products.find(p => p.id === id);
+  if (!confirm(`¿Eliminar "${product ? product.name : 'este producto'}"? También se borra su receta.`)) return;
+  const { error } = await supabaseClient.from("products").delete().eq("id", id);
+  if (error) { alert("No se pudo eliminar: " + error.message); return; }
+  products = products.filter(p => p.id !== id);
+  renderBusinessView();
+}
 
+async function handleSaveSale(e) {
+  e.preventDefault();
   const quantity = parseInt(document.getElementById("input-sale-qty").value, 10);
   const saleDate = document.getElementById("input-sale-date").value;
   const note = document.getElementById("input-sale-note").value.trim();
 
-  const { data, error } = await supabaseClient
-    .from("sales")
-    .insert({
-      business_id: currentBusinessId,
-      product_id: product.id,
-      product_name: product.name,
-      quantity,
-      unit_cost: product.cost,
-      unit_price: product.price,
-      sale_date: saleDate,
-      note
-    })
-    .select()
-    .single();
-  if (error) { alert("No se pudo registrar la venta: " + error.message); return; }
-  sales.unshift(data);
+  if (editingSaleId) {
+    const { data, error } = await supabaseClient
+      .from("sales").update({ quantity, sale_date: saleDate, note }).eq("id", editingSaleId).select().single();
+    if (error) { alert("No se pudo actualizar la venta: " + error.message); return; }
+    const idx = sales.findIndex(s => s.id === editingSaleId);
+    if (idx !== -1) sales[idx] = data;
+  } else {
+    const productId = document.getElementById("input-sale-product").value;
+    const product = products.find(p => p.id === productId);
+    if (!product) { alert("Elige un producto válido."); return; }
+
+    const { data, error } = await supabaseClient
+      .from("sales")
+      .insert({
+        business_id: currentBusinessId,
+        product_id: product.id,
+        product_name: product.name,
+        quantity,
+        unit_cost: product.cost,
+        unit_price: product.price,
+        sale_date: saleDate,
+        note
+      })
+      .select()
+      .single();
+    if (error) { alert("No se pudo registrar la venta: " + error.message); return; }
+    sales.unshift(data);
+  }
   renderBusinessView();
   closeModal();
+}
+
+async function deleteSale(id) {
+  if (!confirm("¿Eliminar esta venta?")) return;
+  const { error } = await supabaseClient.from("sales").delete().eq("id", id);
+  if (error) { alert("No se pudo eliminar: " + error.message); return; }
+  sales = sales.filter(s => s.id !== id);
+  renderBusinessView();
 }
 
 // ============================================
@@ -402,24 +564,74 @@ function renderSavings() {
       <td>${m.type === "deposito" ? "Depósito" : "Retiro"}</td>
       <td>${escapeHtml(m.note || "—")}</td>
       <td class="num ${m.type === "deposito" ? "positive" : "negative"}">${m.type === "deposito" ? "+" : "−"}${fmt(m.amount)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-action" data-edit-saving="${m.id}" title="Editar">✏️</button>
+          <button class="icon-action danger" data-delete-saving="${m.id}" title="Eliminar">🗑</button>
+        </div>
+      </td>
     </tr>
   `).join("");
+
+  body.querySelectorAll("[data-edit-saving]").forEach(btn => {
+    btn.addEventListener("click", () => openSavingModal(savingsMovements.find(m => m.id === btn.dataset.editSaving)));
+  });
+  body.querySelectorAll("[data-delete-saving]").forEach(btn => {
+    btn.addEventListener("click", () => deleteSaving(btn.dataset.deleteSaving));
+  });
 }
 
-async function handleCreateSaving(e) {
+function openSavingModal(saving = null) {
+  if (saving) {
+    editingSavingId = saving.id;
+    savingType = saving.type;
+    document.getElementById("modal-saving-title").textContent = "Editar movimiento";
+    document.getElementById("input-saving-amount").value = saving.amount;
+    document.getElementById("input-saving-note").value = saving.note || "";
+    document.querySelectorAll("#saving-type-toggle .seg-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.type === saving.type);
+    });
+  } else {
+    editingSavingId = null;
+    savingType = "deposito";
+    document.getElementById("modal-saving-title").textContent = "Movimiento de ahorro";
+    document.querySelectorAll("#saving-type-toggle .seg-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.type === "deposito");
+    });
+  }
+  openModal("modal-saving");
+}
+
+async function handleSaveSaving(e) {
   e.preventDefault();
   const amount = parseFloat(document.getElementById("input-saving-amount").value);
   const note = document.getElementById("input-saving-note").value.trim();
 
-  const { data, error } = await supabaseClient
-    .from("savings")
-    .insert({ user_id: currentUser.id, amount, type: savingType, note })
-    .select()
-    .single();
-  if (error) { alert("No se pudo guardar el movimiento: " + error.message); return; }
-  savingsMovements.unshift(data);
+  if (editingSavingId) {
+    const { data, error } = await supabaseClient
+      .from("savings").update({ amount, type: savingType, note }).eq("id", editingSavingId).select().single();
+    if (error) { alert("No se pudo actualizar el movimiento: " + error.message); return; }
+    const idx = savingsMovements.findIndex(m => m.id === editingSavingId);
+    if (idx !== -1) savingsMovements[idx] = data;
+  } else {
+    const { data, error } = await supabaseClient
+      .from("savings")
+      .insert({ user_id: currentUser.id, amount, type: savingType, note })
+      .select()
+      .single();
+    if (error) { alert("No se pudo guardar el movimiento: " + error.message); return; }
+    savingsMovements.unshift(data);
+  }
   renderSavings();
   closeModal();
+}
+
+async function deleteSaving(id) {
+  if (!confirm("¿Eliminar este movimiento de ahorro?")) return;
+  const { error } = await supabaseClient.from("savings").delete().eq("id", id);
+  if (error) { alert("No se pudo eliminar: " + error.message); return; }
+  savingsMovements = savingsMovements.filter(m => m.id !== id);
+  renderSavings();
 }
 
 // ============================================
@@ -432,34 +644,88 @@ function renderSuppliers() {
     <tr>
       <td>${escapeHtml(s.name)}</td>
       <td>${escapeHtml(s.contact || "—")}</td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-action" data-edit-supplier="${s.id}" title="Editar">✏️</button>
+          <button class="icon-action danger" data-delete-supplier="${s.id}" title="Eliminar">🗑</button>
+        </div>
+      </td>
     </tr>
   `).join("");
+
+  body.querySelectorAll("[data-edit-supplier]").forEach(btn => {
+    btn.addEventListener("click", () => openSupplierModal(suppliers.find(s => s.id === btn.dataset.editSupplier)));
+  });
+  body.querySelectorAll("[data-delete-supplier]").forEach(btn => {
+    btn.addEventListener("click", () => deleteSupplier(btn.dataset.deleteSupplier));
+  });
 }
 
-async function handleCreateSupplier(e) {
+function openSupplierModal(supplier = null) {
+  if (supplier) {
+    editingSupplierId = supplier.id;
+    document.getElementById("modal-supplier-title").textContent = "Editar proveedor";
+    document.getElementById("input-supplier-name").value = supplier.name;
+    document.getElementById("input-supplier-contact").value = supplier.contact || "";
+    document.getElementById("input-supplier-notes").value = supplier.notes || "";
+  } else {
+    editingSupplierId = null;
+    document.getElementById("modal-supplier-title").textContent = "Nuevo proveedor";
+  }
+  openModal("modal-supplier");
+}
+
+async function handleSaveSupplier(e) {
   e.preventDefault();
   const name = document.getElementById("input-supplier-name").value.trim();
   const contact = document.getElementById("input-supplier-contact").value.trim();
   const notes = document.getElementById("input-supplier-notes").value.trim();
 
-  const { data, error } = await supabaseClient
-    .from("suppliers")
-    .insert({ business_id: currentBusinessId, name, contact, notes })
-    .select()
-    .single();
-  if (error) { alert("No se pudo guardar el proveedor: " + error.message); return; }
-  suppliers.push(data);
+  if (editingSupplierId) {
+    const { data, error } = await supabaseClient
+      .from("suppliers").update({ name, contact, notes }).eq("id", editingSupplierId).select().single();
+    if (error) { alert("No se pudo actualizar el proveedor: " + error.message); return; }
+    const idx = suppliers.findIndex(s => s.id === editingSupplierId);
+    if (idx !== -1) suppliers[idx] = data;
+  } else {
+    const { data, error } = await supabaseClient
+      .from("suppliers").insert({ business_id: currentBusinessId, name, contact, notes }).select().single();
+    if (error) { alert("No se pudo guardar el proveedor: " + error.message); return; }
+    suppliers.push(data);
+  }
   renderSuppliers();
   closeModal();
+}
+
+async function deleteSupplier(id) {
+  if (!confirm("¿Eliminar este proveedor? Los insumos que le asignaste se quedan sin proveedor (no se borran).")) return;
+  const { error } = await supabaseClient.from("suppliers").delete().eq("id", id);
+  if (error) { alert("No se pudo eliminar: " + error.message); return; }
+  suppliers = suppliers.filter(s => s.id !== id);
+  supplies.forEach(s => { if (s.supplier_id === id) { s.supplier_id = null; s.suppliers = null; } });
+  renderSuppliers();
+  renderSupplies();
 }
 
 // ============================================
 // INSUMOS (con comparación de proveedores)
 // ============================================
-function openSupplyModal() {
+function openSupplyModal(supply = null) {
   const select = document.getElementById("input-supply-supplier");
   select.innerHTML = `<option value="">Sin proveedor asignado</option>` +
     suppliers.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+
+  if (supply) {
+    editingSupplyId = supply.id;
+    document.getElementById("modal-supply-title").textContent = "Editar insumo";
+    document.getElementById("input-supply-name").value = supply.name;
+    document.getElementById("input-supply-unit").value = supply.unit;
+    document.getElementById("input-supply-cost").value = supply.unit_cost;
+    select.value = supply.supplier_id || "";
+  } else {
+    editingSupplyId = null;
+    document.getElementById("modal-supply-title").textContent = "Nuevo insumo";
+  }
   openModal("modal-supply");
 }
 
@@ -495,26 +761,56 @@ function renderSupplies() {
       <td>${escapeHtml(s.name)}</td>
       <td>${escapeHtml(supplierName)}</td>
       <td class="num">${costDisplay}${isCheapest ? '<span class="badge-cheapest">✓ más barato</span>' : ''}</td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-action" data-edit-supply="${s.id}" title="Editar">✏️</button>
+          <button class="icon-action danger" data-delete-supply="${s.id}" title="Eliminar">🗑</button>
+        </div>
+      </td>
     </tr>`;
   }).join("");
+
+  body.querySelectorAll("[data-edit-supply]").forEach(btn => {
+    btn.addEventListener("click", () => openSupplyModal(supplies.find(s => s.id === btn.dataset.editSupply)));
+  });
+  body.querySelectorAll("[data-delete-supply]").forEach(btn => {
+    btn.addEventListener("click", () => deleteSupply(btn.dataset.deleteSupply));
+  });
 }
 
-async function handleCreateSupply(e) {
+async function handleSaveSupply(e) {
   e.preventDefault();
   const name = document.getElementById("input-supply-name").value.trim();
   const unit = document.getElementById("input-supply-unit").value;
   const unit_cost = parseFloat(document.getElementById("input-supply-cost").value);
   const supplierId = document.getElementById("input-supply-supplier").value || null;
 
-  const { data, error } = await supabaseClient
-    .from("supplies")
-    .insert({ business_id: currentBusinessId, supplier_id: supplierId, name, unit, unit_cost })
-    .select("*, suppliers(name)")
-    .single();
-  if (error) { alert("No se pudo guardar el insumo: " + error.message); return; }
-  supplies.push(data);
+  if (editingSupplyId) {
+    const { data, error } = await supabaseClient
+      .from("supplies").update({ name, unit, unit_cost, supplier_id: supplierId })
+      .eq("id", editingSupplyId).select("*, suppliers(name)").single();
+    if (error) { alert("No se pudo actualizar el insumo: " + error.message); return; }
+    const idx = supplies.findIndex(s => s.id === editingSupplyId);
+    if (idx !== -1) supplies[idx] = data;
+  } else {
+    const { data, error } = await supabaseClient
+      .from("supplies")
+      .insert({ business_id: currentBusinessId, supplier_id: supplierId, name, unit, unit_cost })
+      .select("*, suppliers(name)")
+      .single();
+    if (error) { alert("No se pudo guardar el insumo: " + error.message); return; }
+    supplies.push(data);
+  }
   renderSupplies();
   closeModal();
+}
+
+async function deleteSupply(id) {
+  if (!confirm("¿Eliminar este insumo? También se quita de las recetas que lo usaban.")) return;
+  const { error } = await supabaseClient.from("supplies").delete().eq("id", id);
+  if (error) { alert("No se pudo eliminar: " + error.message); return; }
+  supplies = supplies.filter(s => s.id !== id);
+  renderSupplies();
 }
 
 // ============================================
@@ -744,34 +1040,46 @@ function renderCalendar() {
     const weekday = cellDate.getDay();
     const isScheduled = gymSchedule.includes(weekday);
     const attended = gymLogs[key];
-    const isPast = key < todayKey;
     const isToday = key === todayKey;
 
     let cls = "cal-day";
+    if (!isScheduled) cls += " not-scheduled";
     if (isToday) cls += " today";
     if (isScheduled) cls += " scheduled";
     if (attended === true) cls += " done";
-    else if (attended === false || (isScheduled && isPast && attended === undefined)) cls += " missed";
+    else if (attended === false) cls += " missed";
 
-    html += `<div class="${cls}" data-date="${key}">${d}${isScheduled ? '<span class="cal-dot"></span>' : ''}</div>`;
+    html += `<div class="${cls}" data-date="${key}" data-scheduled="${isScheduled}">${d}${isScheduled ? '<span class="cal-dot"></span>' : ''}</div>`;
   }
 
   grid.innerHTML = html;
-  grid.querySelectorAll(".cal-day:not(.empty)").forEach(cell => {
+  // Solo los días programados (que marcaste que sí vas) se pueden marcar como cumplido/faltaste
+  grid.querySelectorAll('.cal-day[data-scheduled="true"]').forEach(cell => {
     cell.addEventListener("click", () => toggleAttendance(cell.dataset.date));
   });
 }
 
 async function toggleAttendance(dateStr) {
+  // Ciclo de 3 estados: sin marcar (programado) -> cumplí -> falté -> sin marcar de nuevo
   const current = gymLogs[dateStr];
-  const next = current === true ? false : true; // ciclo: sin marcar/faltó -> cumplí -> faltó
-  gymLogs[dateStr] = next;
+  if (current === undefined) {
+    gymLogs[dateStr] = true;
+  } else if (current === true) {
+    gymLogs[dateStr] = false;
+  } else {
+    delete gymLogs[dateStr];
+  }
   renderCalendar();
 
-  const { error } = await supabaseClient
-    .from("gym_logs")
-    .upsert({ user_id: currentUser.id, log_date: dateStr, attended: next }, { onConflict: "user_id,log_date" });
-  if (error) console.error(error);
+  if (gymLogs[dateStr] === undefined) {
+    const { error } = await supabaseClient.from("gym_logs").delete().eq("user_id", currentUser.id).eq("log_date", dateStr);
+    if (error) console.error(error);
+  } else {
+    const { error } = await supabaseClient
+      .from("gym_logs")
+      .upsert({ user_id: currentUser.id, log_date: dateStr, attended: gymLogs[dateStr] }, { onConflict: "user_id,log_date" });
+    if (error) console.error(error);
+  }
 }
 
 // ============================================
