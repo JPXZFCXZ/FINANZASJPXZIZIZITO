@@ -3,7 +3,7 @@
 // Los encuentras en: Project Settings > API
 // ============================================
 
-const SUPABASE_URL = "PON_AQUI_TU_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "PON_AQUI_TU_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://hudssmuhvhumsqnvmeoz.supabase.co/";
+const SUPABASE_ANON_KEY = "sb_publishable_07syWkJYrAHdm1mLuDSbbA_ynZo0y7L";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
