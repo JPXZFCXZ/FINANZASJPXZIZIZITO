@@ -1,16 +1,24 @@
 :root {
-  --bg: #F7F7F5;
+  --bg: #F7F7FA;
   --surface: #FFFFFF;
-  --ink: #16171B;
-  --ink-soft: #6E7079;
-  --line: #E7E7E3;
-  --accent: #1F7A5C;       /* ganancia / crecimiento */
-  --accent-soft: #E4F1EC;
-  --savings: #2F5D8A;      /* ahorro */
-  --savings-soft: #E7EEF5;
-  --danger: #B3432B;
-  --sidebar: #16171B;
-  --sidebar-text: #C9CACE;
+  --ink: #26262E;
+  --ink-soft: #83838F;
+  --line: #ECECF2;
+
+  /* pastel de Apple: cada apartado tiene su propio tono, el resto queda neutro */
+  --accent: #2E9E7B;        /* ganancia / crecimiento (menta) */
+  --accent-soft: #DFF5EC;
+  --savings: #7B6FD9;       /* ahorro (lavanda) */
+  --savings-soft: #EBE8FB;
+  --supply: #3D8FC4;        /* insumos y proveedores (cielo) */
+  --supply-soft: #E2F1FA;
+  --warn: #D99A3D;          /* alertas suaves (durazno) */
+  --warn-soft: #FBEEDC;
+  --danger: #DE7B68;        /* coral suave */
+  --danger-soft: #FBE9E5;
+
+  --sidebar: #23222B;
+  --sidebar-text: #B9B8C4;
   --radius-s: 10px;
   --radius-m: 16px;
   --ease: cubic-bezier(.22, 1, .36, 1);
@@ -66,6 +74,7 @@ input, select, button { font-family: inherit; }
   margin-bottom: 20px;
 }
 
+.auth-brand { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ink-soft); margin: 0 0 18px; }
 .auth-card h1 { font-size: 24px; font-weight: 700; margin: 0 0 6px; }
 .auth-sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 28px; line-height: 1.5; }
 
@@ -176,7 +185,7 @@ input:focus, select:focus {
 .nav-item.active { background: rgba(255,255,255,.12); color: white; }
 
 .nav-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.dot-savings { background: #6FA9DE; }
+.dot-savings { background: var(--savings); }
 
 .new-business-btn {
   margin-top: auto;
@@ -233,6 +242,59 @@ input:focus, select:focus {
 }
 .table-card-title { font-weight: 600; font-size: 14px; padding: 16px 20px 8px; }
 
+.table-card-title-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 6px; }
+.table-card-title-row .table-card-title { padding: 0; }
+
+.link-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--supply); font-size: 13px; font-weight: 600;
+  padding: 4px 6px; border-radius: 6px;
+  transition: background .15s var(--ease);
+}
+.link-btn:hover { background: var(--supply-soft); }
+
+.hint-text { font-size: 12px; color: var(--ink-soft); padding: 6px 20px 14px; margin: 0; line-height: 1.5; }
+
+.action-btn {
+  background: none; border: 1px solid var(--line); cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--ink-soft);
+  padding: 5px 10px; border-radius: 7px;
+  transition: border-color .15s var(--ease), color .15s var(--ease);
+}
+.action-btn:hover { border-color: var(--supply); color: var(--supply); }
+
+.badge-cheapest {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 700; color: var(--accent);
+  background: var(--accent-soft); padding: 2px 7px; border-radius: 20px;
+  margin-left: 6px;
+}
+
+/* ============ TABS DENTRO DE UN NEGOCIO ============ */
+.segmented-tabs { width: fit-content; margin-bottom: 22px; }
+.segmented-tabs .seg-btn { padding: 8px 18px; }
+.tab-panel { animation: riseIn .3s var(--ease); }
+
+/* ============ MODAL DE RECETA ============ */
+.recipe-sub { font-size: 13px; color: var(--ink-soft); margin: -8px 0 16px; }
+.recipe-list { max-height: 260px; overflow-y: auto; margin-bottom: 4px; }
+.recipe-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--line);
+}
+.recipe-row:last-child { border-bottom: none; }
+.recipe-row-info { font-size: 13px; }
+.recipe-row-info .rname { font-weight: 600; display: block; }
+.recipe-row-info .rmeta { color: var(--ink-soft); font-size: 12px; }
+.recipe-row input[type="number"] { width: 84px; text-align: right; padding: 8px 10px; }
+
+.recipe-total {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--supply-soft); border-radius: var(--radius-s);
+  padding: 12px 16px; margin: 14px 0 18px;
+  font-weight: 700; color: var(--supply);
+}
+
 table { width: 100%; border-collapse: collapse; }
 th {
   text-align: left; font-size: 12px; font-weight: 500; color: var(--ink-soft);
@@ -245,6 +307,7 @@ tr:last-child td { border-bottom: none; }
 .negative { color: var(--danger); }
 
 .empty-state { text-align: center; color: var(--ink-soft); font-size: 13px; padding: 24px 20px; margin: 0; }
+.ink-soft { color: var(--ink-soft); font-weight: 400; font-size: 12px; }
 
 .empty-hero { text-align: center; padding: 80px 20px; animation: riseIn .4s var(--ease); }
 .empty-hero h2 { font-size: 24px; margin-bottom: 8px; }
