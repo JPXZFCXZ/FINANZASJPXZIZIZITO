@@ -82,7 +82,7 @@
         <div class="table-card">
           <table>
             <thead>
-              <tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th class="num">Monto</th></tr>
+              <tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th class="num">Monto</th><th></th></tr>
             </thead>
             <tbody id="savings-table-body"></tbody>
           </table>
@@ -150,6 +150,7 @@
           <div class="header-actions" id="business-header-actions">
             <button class="btn-secondary" id="add-product-btn">+ Producto</button>
             <button class="btn-primary" id="add-sale-btn">+ Registrar venta</button>
+            <button class="danger-link" id="delete-business-btn" title="Eliminar este negocio">Eliminar negocio</button>
           </div>
         </header>
 
@@ -191,12 +192,18 @@
               <div class="table-card-title">Ventas recientes</div>
               <table>
                 <thead>
-                  <tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Ganancia</th></tr>
+                  <tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Ganancia</th><th></th></tr>
                 </thead>
                 <tbody id="sales-table-body"></tbody>
               </table>
               <p class="empty-state" id="sales-empty">Aún no registras ventas.</p>
             </div>
+          </div>
+
+          <div class="table-card chart-card">
+            <div class="table-card-title">Ganancia por mes</div>
+            <canvas id="profit-chart" height="90"></canvas>
+            <p class="empty-state" id="chart-empty">Registra ventas para ver tu tendencia aquí.</p>
           </div>
         </div>
 
@@ -210,7 +217,7 @@
               </div>
               <table>
                 <thead>
-                  <tr><th>Nombre</th><th>Contacto</th></tr>
+                  <tr><th>Nombre</th><th>Contacto</th><th></th></tr>
                 </thead>
                 <tbody id="suppliers-table-body"></tbody>
               </table>
@@ -224,7 +231,7 @@
               </div>
               <table>
                 <thead>
-                  <tr><th>Insumo</th><th>Proveedor</th><th class="num">Costo real</th></tr>
+                  <tr><th>Insumo</th><th>Proveedor</th><th class="num">Costo real</th><th></th></tr>
                 </thead>
                 <tbody id="supplies-table-body"></tbody>
               </table>
@@ -262,7 +269,7 @@
     </div>
 
     <div class="modal" id="modal-product">
-      <h3>Nuevo producto</h3>
+      <h3 id="modal-product-title">Nuevo producto</h3>
       <form id="form-product">
         <label><span>Nombre</span><input type="text" id="input-product-name" required></label>
         <div class="modal-row">
@@ -277,7 +284,7 @@
     </div>
 
     <div class="modal" id="modal-sale">
-      <h3>Registrar venta</h3>
+      <h3 id="modal-sale-title">Registrar venta</h3>
       <form id="form-sale">
         <label><span>Producto</span>
           <select id="input-sale-product" required></select>
@@ -295,7 +302,7 @@
     </div>
 
     <div class="modal" id="modal-supplier">
-      <h3>Nuevo proveedor</h3>
+      <h3 id="modal-supplier-title">Nuevo proveedor</h3>
       <form id="form-supplier">
         <label><span>Nombre</span><input type="text" id="input-supplier-name" required placeholder="Ej. Distribuidora López"></label>
         <label><span>Contacto (opcional)</span><input type="text" id="input-supplier-contact" placeholder="Teléfono, WhatsApp..."></label>
@@ -308,7 +315,7 @@
     </div>
 
     <div class="modal" id="modal-supply">
-      <h3>Nuevo insumo</h3>
+      <h3 id="modal-supply-title">Nuevo insumo</h3>
       <form id="form-supply">
         <label><span>Nombre del insumo</span><input type="text" id="input-supply-name" required placeholder="Ej. Harina, Huevo, Caja..."></label>
         <div class="modal-row">
@@ -375,7 +382,7 @@
     </div>
 
     <div class="modal" id="modal-saving">
-      <h3>Movimiento de ahorro</h3>
+      <h3 id="modal-saving-title">Movimiento de ahorro</h3>
       <form id="form-saving">
         <div class="segmented" id="saving-type-toggle">
           <button type="button" class="seg-btn active" data-type="deposito">Depósito</button>
@@ -393,6 +400,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>
