@@ -12,6 +12,12 @@ let savingType = "deposito";
 let suppliers = [];
 let supplies = [];
 let currentRecipeProductId = null;
+let gymSchedule = [];
+let gymRoutines = [];
+let gymLogs = {}; // { "YYYY-MM-DD": true/false }
+let calendarDate = new Date();
+
+const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 const fmt = (n) => "$" + Number(n || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -43,6 +49,7 @@ async function enterApp() {
   document.getElementById("app-shell").classList.remove("hidden");
   await loadBusinesses();
   await loadSavings();
+  await loadGymData();
   renderSidebar();
   showView("savings");
 }
@@ -93,6 +100,7 @@ function bindEvents() {
   });
 
   document.getElementById("nav-savings").addEventListener("click", () => showView("savings"));
+  document.getElementById("nav-gym").addEventListener("click", () => showView("gym"));
 
   document.getElementById("new-business-btn").addEventListener("click", () => openModal("modal-business"));
   document.getElementById("empty-new-business-btn").addEventListener("click", () => openModal("modal-business"));
@@ -102,6 +110,13 @@ function bindEvents() {
   document.getElementById("add-supplier-btn").addEventListener("click", () => openModal("modal-supplier"));
   document.getElementById("add-supply-btn").addEventListener("click", () => openSupplyModal());
   document.getElementById("recipe-apply-btn").addEventListener("click", applyRecipeCostToProduct);
+  document.getElementById("add-routine-btn").addEventListener("click", () => openModal("modal-routine"));
+  document.getElementById("cal-prev").addEventListener("click", () => changeCalendarMonth(-1));
+  document.getElementById("cal-next").addEventListener("click", () => changeCalendarMonth(1));
+
+  document.querySelectorAll(".wday-btn").forEach(btn => {
+    btn.addEventListener("click", () => toggleScheduleDay(parseInt(btn.dataset.day, 10)));
+  });
 
   document.querySelectorAll("#business-tabs .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -126,6 +141,7 @@ function bindEvents() {
   document.getElementById("form-saving").addEventListener("submit", handleCreateSaving);
   document.getElementById("form-supplier").addEventListener("submit", handleCreateSupplier);
   document.getElementById("form-supply").addEventListener("submit", handleCreateSupply);
+  document.getElementById("form-routine").addEventListener("submit", handleCreateRoutine);
 
   document.querySelectorAll("#saving-type-toggle .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -172,6 +188,7 @@ function openSaleModal() {
 function showView(view, businessId = null) {
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
   document.getElementById("view-savings").classList.add("hidden");
+  document.getElementById("view-gym").classList.add("hidden");
   document.getElementById("view-business").classList.add("hidden");
   document.getElementById("view-empty").classList.add("hidden");
 
@@ -179,6 +196,10 @@ function showView(view, businessId = null) {
     document.getElementById("nav-savings").classList.add("active");
     document.getElementById("view-savings").classList.remove("hidden");
     renderSavings();
+  } else if (view === "gym") {
+    document.getElementById("nav-gym").classList.add("active");
+    document.getElementById("view-gym").classList.remove("hidden");
+    renderGym();
   } else if (view === "business") {
     currentBusinessId = businessId;
     const navEl = document.querySelector(`[data-business-id="${businessId}"]`);
@@ -463,10 +484,17 @@ function renderSupplies() {
     const sameNameCount = supplies.filter(x => x.name.trim().toLowerCase() === key).length;
     const isCheapest = sameNameCount > 1 && s.unit_cost === cheapestByName[key];
     const supplierName = s.suppliers ? s.suppliers.name : "—";
+
+    let costDisplay = `${fmt(s.unit_cost)} <span class="ink-soft">/ ${escapeHtml(s.unit)}</span>`;
+    if (s.unit === "kg" || s.unit === "l") {
+      const smallUnit = s.unit === "kg" ? "g" : "ml";
+      costDisplay += `<br><span class="ink-soft">≈ ${fmt(s.unit_cost / 1000)} / ${smallUnit}</span>`;
+    }
+
     return `<tr>
       <td>${escapeHtml(s.name)}</td>
       <td>${escapeHtml(supplierName)}</td>
-      <td class="num">${fmt(s.unit_cost)} <span class="ink-soft">/ ${escapeHtml(s.unit)}</span>${isCheapest ? '<span class="badge-cheapest">✓ más barato</span>' : ''}</td>
+      <td class="num">${costDisplay}${isCheapest ? '<span class="badge-cheapest">✓ más barato</span>' : ''}</td>
     </tr>`;
   }).join("");
 }
@@ -518,18 +546,42 @@ async function openRecipeModal(productId) {
   const existingMap = {};
   (existing || []).forEach(r => { existingMap[r.supply_id] = r.quantity; });
 
-  listEl.innerHTML = supplies.map(s => `
+  listEl.innerHTML = supplies.map(s => {
+    const showDetail = s.unit === "kg" || s.unit === "l";
+    const smallUnit = s.unit === "kg" ? "g" : "ml";
+    const existingQty = existingMap[s.id] || 0;
+    return `
     <div class="recipe-row" data-supply-id="${s.id}" data-unit-cost="${s.unit_cost}">
       <div class="recipe-row-info">
         <span class="rname">${escapeHtml(s.name)}</span>
         <span class="rmeta">${fmt(s.unit_cost)} / ${escapeHtml(s.unit)}</span>
       </div>
-      <input type="number" step="0.001" min="0" class="recipe-qty" value="${existingMap[s.id] || 0}">
-    </div>
-  `).join("");
+      <div>
+        <input type="number" step="0.001" min="0" class="recipe-qty" value="${existingQty}" title="Cantidad en ${escapeHtml(s.unit)}">
+        ${showDetail ? `
+          <input type="number" step="1" min="0" class="recipe-detail-input" data-factor="1000" placeholder="${smallUnit}" title="O escribe en ${smallUnit}">
+          <div class="recipe-detail-label">${escapeHtml(s.unit)} u ${smallUnit}</div>
+        ` : ""}
+      </div>
+    </div>`;
+  }).join("");
 
   listEl.querySelectorAll(".recipe-qty").forEach(input => {
     input.addEventListener("input", updateRecipeTotal);
+  });
+
+  // Sincroniza el campo "en gramos/ml" con el campo principal (en kg/l)
+  listEl.querySelectorAll(".recipe-detail-input").forEach(detailInput => {
+    const row = detailInput.closest(".recipe-row");
+    const mainInput = row.querySelector(".recipe-qty");
+    const factor = parseFloat(detailInput.dataset.factor);
+    if (parseFloat(mainInput.value) > 0) {
+      detailInput.value = (parseFloat(mainInput.value) * factor).toString();
+    }
+    detailInput.addEventListener("input", () => {
+      mainInput.value = detailInput.value ? (parseFloat(detailInput.value) / factor).toFixed(4) : 0;
+      updateRecipeTotal();
+    });
   });
 
   updateRecipeTotal();
@@ -580,6 +632,146 @@ async function applyRecipeCostToProduct() {
   if (idx !== -1) products[idx] = updated;
   renderBusinessView();
   closeModal();
+}
+
+// ============================================
+// GYM: horario, rutinas y calendario
+// ============================================
+async function loadGymData() {
+  const [{ data: scheduleData }, { data: routineData }, { data: logData }] = await Promise.all([
+    supabaseClient.from("gym_schedule").select("*").eq("user_id", currentUser.id).maybeSingle(),
+    supabaseClient.from("gym_routines").select("*").eq("user_id", currentUser.id).order("weekday", { ascending: true }),
+    supabaseClient.from("gym_logs").select("*").eq("user_id", currentUser.id)
+  ]);
+  gymSchedule = (scheduleData && scheduleData.days) || [];
+  gymRoutines = routineData || [];
+  gymLogs = {};
+  (logData || []).forEach(l => { gymLogs[l.log_date] = l.attended; });
+}
+
+function renderGym() {
+  document.querySelectorAll(".wday-btn").forEach(btn => {
+    const day = parseInt(btn.dataset.day, 10);
+    btn.classList.toggle("active", gymSchedule.includes(day));
+  });
+  renderRoutines();
+  renderCalendar();
+}
+
+async function toggleScheduleDay(day) {
+  if (gymSchedule.includes(day)) {
+    gymSchedule = gymSchedule.filter(d => d !== day);
+  } else {
+    gymSchedule.push(day);
+  }
+  document.querySelector(`.wday-btn[data-day="${day}"]`).classList.toggle("active");
+  renderCalendar();
+
+  const { error } = await supabaseClient
+    .from("gym_schedule")
+    .upsert({ user_id: currentUser.id, days: gymSchedule, updated_at: new Date().toISOString() });
+  if (error) console.error(error);
+}
+
+function renderRoutines() {
+  const list = document.getElementById("routines-list");
+  document.getElementById("routines-empty").classList.toggle("hidden", gymRoutines.length > 0);
+  list.innerHTML = gymRoutines.map(r => `
+    <div class="routine-item">
+      <div>
+        <span class="rname">${escapeHtml(r.title)}</span>
+        ${r.notes ? `<span class="rnotes">${escapeHtml(r.notes)}</span>` : ""}
+      </div>
+      <span class="routine-day-tag">${WEEKDAY_NAMES[r.weekday]}</span>
+    </div>
+  `).join("");
+}
+
+async function handleCreateRoutine(e) {
+  e.preventDefault();
+  const weekday = parseInt(document.getElementById("input-routine-day").value, 10);
+  const title = document.getElementById("input-routine-title").value.trim();
+  const notes = document.getElementById("input-routine-notes").value.trim();
+
+  const { data, error } = await supabaseClient
+    .from("gym_routines")
+    .upsert({ user_id: currentUser.id, weekday, title, notes }, { onConflict: "user_id,weekday" })
+    .select()
+    .single();
+  if (error) { alert("No se pudo guardar la rutina: " + error.message); return; }
+
+  const idx = gymRoutines.findIndex(r => r.weekday === weekday);
+  if (idx !== -1) gymRoutines[idx] = data; else gymRoutines.push(data);
+  gymRoutines.sort((a, b) => a.weekday - b.weekday);
+  renderRoutines();
+  renderCalendar();
+  closeModal();
+}
+
+function changeCalendarMonth(delta) {
+  calendarDate.setMonth(calendarDate.getMonth() + delta);
+  renderCalendar();
+}
+
+function dateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function renderCalendar() {
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  const monthLabel = calendarDate.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
+  document.getElementById("calendar-title").textContent = monthLabel;
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay(); // 0=domingo
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayKey = dateKey(new Date());
+
+  const grid = document.getElementById("calendar-grid");
+  let html = "";
+
+  for (let i = 0; i < startOffset; i++) {
+    html += `<div class="cal-day empty"></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cellDate = new Date(year, month, d);
+    const key = dateKey(cellDate);
+    const weekday = cellDate.getDay();
+    const isScheduled = gymSchedule.includes(weekday);
+    const attended = gymLogs[key];
+    const isPast = key < todayKey;
+    const isToday = key === todayKey;
+
+    let cls = "cal-day";
+    if (isToday) cls += " today";
+    if (isScheduled) cls += " scheduled";
+    if (attended === true) cls += " done";
+    else if (attended === false || (isScheduled && isPast && attended === undefined)) cls += " missed";
+
+    html += `<div class="${cls}" data-date="${key}">${d}${isScheduled ? '<span class="cal-dot"></span>' : ''}</div>`;
+  }
+
+  grid.innerHTML = html;
+  grid.querySelectorAll(".cal-day:not(.empty)").forEach(cell => {
+    cell.addEventListener("click", () => toggleAttendance(cell.dataset.date));
+  });
+}
+
+async function toggleAttendance(dateStr) {
+  const current = gymLogs[dateStr];
+  const next = current === true ? false : true; // ciclo: sin marcar/faltó -> cumplí -> faltó
+  gymLogs[dateStr] = next;
+  renderCalendar();
+
+  const { error } = await supabaseClient
+    .from("gym_logs")
+    .upsert({ user_id: currentUser.id, log_date: dateStr, attended: next }, { onConflict: "user_id,log_date" });
+  if (error) console.error(error);
 }
 
 // ============================================
