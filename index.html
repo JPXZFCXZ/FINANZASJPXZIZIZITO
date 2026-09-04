@@ -49,6 +49,9 @@
         <button class="nav-item active" id="nav-savings" data-view="savings">
           <span class="nav-dot dot-savings"></span> Ahorros
         </button>
+        <button class="nav-item" id="nav-gym" data-view="gym">
+          <span class="nav-dot dot-gym"></span> Gym
+        </button>
       </nav>
 
       <div class="nav-label">Mis negocios</div>
@@ -87,7 +90,57 @@
         </div>
       </section>
 
-      <!-- Vista: NEGOCIO -->
+      <!-- Vista: GYM -->
+      <section id="view-gym" class="view hidden">
+        <header class="view-header">
+          <div>
+            <h2>Gym</h2>
+            <p class="view-sub">Tu horario, tu rutina, y si cumpliste.</p>
+          </div>
+        </header>
+
+        <div class="table-card gym-schedule-card">
+          <div class="table-card-title">¿Qué días vas?</div>
+          <div class="weekday-toggle" id="weekday-toggle">
+            <button type="button" class="wday-btn" data-day="1">L</button>
+            <button type="button" class="wday-btn" data-day="2">M</button>
+            <button type="button" class="wday-btn" data-day="3">M</button>
+            <button type="button" class="wday-btn" data-day="4">J</button>
+            <button type="button" class="wday-btn" data-day="5">V</button>
+            <button type="button" class="wday-btn" data-day="6">S</button>
+            <button type="button" class="wday-btn" data-day="0">D</button>
+          </div>
+          <p class="hint-text">Toca los días que planeas ir (seguido, salteado, como sea). Se guarda solo.</p>
+        </div>
+
+        <div class="two-col">
+          <div class="table-card">
+            <div class="table-card-title-row">
+              <div class="table-card-title">Tu rutina por día</div>
+              <button class="link-btn" id="add-routine-btn">+ Agregar</button>
+            </div>
+            <div id="routines-list" class="routines-list"></div>
+            <p class="empty-state" id="routines-empty">Aún no capturas ninguna rutina.</p>
+          </div>
+
+          <div class="table-card">
+            <div class="calendar-header">
+              <button class="icon-btn" id="cal-prev" type="button">‹</button>
+              <span id="calendar-title" class="calendar-title"></span>
+              <button class="icon-btn" id="cal-next" type="button">›</button>
+            </div>
+            <div class="calendar-weekdays">
+              <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
+            </div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+            <div class="calendar-legend">
+              <span><i class="dot dot-done"></i> Cumplido</span>
+              <span><i class="dot dot-missed"></i> Faltaste</span>
+              <span><i class="dot dot-pending"></i> Programado</span>
+            </div>
+          </div>
+        </div>
+      </section>
       <section id="view-business" class="view hidden">
         <header class="view-header">
           <div>
@@ -171,12 +224,12 @@
               </div>
               <table>
                 <thead>
-                  <tr><th>Insumo</th><th>Proveedor</th><th class="num">Costo/unidad</th></tr>
+                  <tr><th>Insumo</th><th>Proveedor</th><th class="num">Costo real</th></tr>
                 </thead>
                 <tbody id="supplies-table-body"></tbody>
               </table>
               <p class="empty-state" id="supplies-empty">Aún no tienes insumos registrados.</p>
-              <p class="hint-text">Tip: registra el mismo insumo con dos proveedores distintos para comparar precios — el más barato se marca con ✓.</p>
+              <p class="hint-text">Tip: si compras por kg o litro pero vendes en porciones chicas, la app te muestra aquí el costo ya prorrateado por gramo/ml. Y si registras el mismo insumo con dos proveedores, el más barato se marca con ✓.</p>
             </div>
           </div>
         </div>
@@ -296,6 +349,29 @@
         <button type="button" class="btn-secondary modal-cancel">Cancelar</button>
         <button type="button" class="btn-primary" id="recipe-apply-btn">Usar este costo en el producto</button>
       </div>
+    </div>
+
+    <div class="modal" id="modal-routine">
+      <h3>Rutina del día</h3>
+      <form id="form-routine">
+        <label><span>Día</span>
+          <select id="input-routine-day">
+            <option value="1">Lunes</option>
+            <option value="2">Martes</option>
+            <option value="3">Miércoles</option>
+            <option value="4">Jueves</option>
+            <option value="5">Viernes</option>
+            <option value="6">Sábado</option>
+            <option value="0">Domingo</option>
+          </select>
+        </label>
+        <label><span>Título</span><input type="text" id="input-routine-title" required placeholder="Ej. Pecho y tríceps"></label>
+        <label><span>Detalle (opcional)</span><input type="text" id="input-routine-notes" placeholder="Ejercicios, series, repeticiones..."></label>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar</button>
+        </div>
+      </form>
     </div>
 
     <div class="modal" id="modal-saving">
