@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzas — control de negocios y ahorro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ PANTALLA DE AUTENTICACIÓN ============ -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-mark">₣</div>
+      <h1 id="auth-title">Entrar</h1>
+      <p class="auth-sub" id="auth-sub">Controla lo que ganas, lo que gastas y lo que ahorras.</p>
+
+      <form id="auth-form">
+        <label>
+          <span>Correo</span>
+          <input type="email" id="auth-email" placeholder="tucorreo@ejemplo.com" required autocomplete="email">
+        </label>
+        <label>
+          <span>Contraseña</span>
+          <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password" minlength="6">
+        </label>
+        <button type="submit" class="btn-primary" id="auth-submit">Entrar</button>
+      </form>
+
+      <p class="auth-error" id="auth-error"></p>
+
+      <button class="auth-toggle" id="auth-toggle">¿No tienes cuenta? Crea una</button>
+    </div>
+  </div>
+
+  <!-- ============ APP (después de login) ============ -->
+  <div id="app-shell" class="app-shell hidden">
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="brand">₣ Finanzas</div>
+        <button class="icon-btn" id="logout-btn" title="Cerrar sesión">⏻</button>
+      </div>
+
+      <nav class="nav-group">
+        <button class="nav-item active" id="nav-savings" data-view="savings">
+          <span class="nav-dot dot-savings"></span> Ahorros
+        </button>
+      </nav>
+
+      <div class="nav-label">Mis negocios</div>
+      <nav class="nav-group" id="business-list"></nav>
+
+      <button class="new-business-btn" id="new-business-btn">+ Nuevo negocio</button>
+    </aside>
+
+    <main class="main">
+
+      <!-- Vista: AHORROS -->
+      <section id="view-savings" class="view">
+        <header class="view-header">
+          <div>
+            <h2>Ahorros</h2>
+            <p class="view-sub">Tu colchón, aparte de cualquier negocio.</p>
+          </div>
+          <button class="btn-primary" id="add-saving-btn">+ Movimiento</button>
+        </header>
+
+        <div class="stat-hero">
+          <div class="stat-block">
+            <span class="stat-label">Total ahorrado</span>
+            <span class="stat-number" id="savings-total">$0.00</span>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th class="num">Monto</th></tr>
+            </thead>
+            <tbody id="savings-table-body"></tbody>
+          </table>
+          <p class="empty-state" id="savings-empty">Aún no registras movimientos de ahorro.</p>
+        </div>
+      </section>
+
+      <!-- Vista: NEGOCIO -->
+      <section id="view-business" class="view hidden">
+        <header class="view-header">
+          <div>
+            <h2 id="business-name">Negocio</h2>
+            <p class="view-sub">Cuánto entra, cuánto cuesta, cuánto ganas.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" id="add-product-btn">+ Producto</button>
+            <button class="btn-primary" id="add-sale-btn">+ Registrar venta</button>
+          </div>
+        </header>
+
+        <div class="stat-hero three">
+          <div class="stat-block">
+            <span class="stat-label">Ingresos</span>
+            <span class="stat-number" id="stat-revenue">$0.00</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Costos</span>
+            <span class="stat-number" id="stat-cost">$0.00</span>
+          </div>
+          <div class="stat-block accent">
+            <span class="stat-label">Ganancia</span>
+            <span class="stat-number" id="stat-profit">$0.00</span>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="table-card">
+            <div class="table-card-title">Productos</div>
+            <table>
+              <thead>
+                <tr><th>Producto</th><th class="num">Costo</th><th class="num">Precio</th><th class="num">Margen</th></tr>
+              </thead>
+              <tbody id="products-table-body"></tbody>
+            </table>
+            <p class="empty-state" id="products-empty">Agrega tu primer producto.</p>
+          </div>
+
+          <div class="table-card">
+            <div class="table-card-title">Ventas recientes</div>
+            <table>
+              <thead>
+                <tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Ganancia</th></tr>
+              </thead>
+              <tbody id="sales-table-body"></tbody>
+            </table>
+            <p class="empty-state" id="sales-empty">Aún no registras ventas.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Estado vacío: sin negocios -->
+      <section id="view-empty" class="view hidden">
+        <div class="empty-hero">
+          <h2>Crea tu primer negocio</h2>
+          <p>Cada negocio lleva su propio control de productos, costos y ventas.</p>
+          <button class="btn-primary" id="empty-new-business-btn">+ Nuevo negocio</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============ MODALES ============ -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+
+    <div class="modal" id="modal-business">
+      <h3>Nuevo negocio</h3>
+      <form id="form-business">
+        <label><span>Nombre del negocio</span><input type="text" id="input-business-name" required placeholder="Ej. Pastelería, Reventa de tenis..."></label>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Crear</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal" id="modal-product">
+      <h3>Nuevo producto</h3>
+      <form id="form-product">
+        <label><span>Nombre</span><input type="text" id="input-product-name" required></label>
+        <div class="modal-row">
+          <label><span>Costo</span><input type="number" step="0.01" min="0" id="input-product-cost" required></label>
+          <label><span>Precio de venta</span><input type="number" step="0.01" min="0" id="input-product-price" required></label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal" id="modal-sale">
+      <h3>Registrar venta</h3>
+      <form id="form-sale">
+        <label><span>Producto</span>
+          <select id="input-sale-product" required></select>
+        </label>
+        <div class="modal-row">
+          <label><span>Cantidad</span><input type="number" min="1" step="1" id="input-sale-qty" value="1" required></label>
+          <label><span>Fecha</span><input type="date" id="input-sale-date" required></label>
+        </div>
+        <label><span>Nota (opcional)</span><input type="text" id="input-sale-note" placeholder="Cliente, canal, etc."></label>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Registrar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal" id="modal-saving">
+      <h3>Movimiento de ahorro</h3>
+      <form id="form-saving">
+        <div class="segmented" id="saving-type-toggle">
+          <button type="button" class="seg-btn active" data-type="deposito">Depósito</button>
+          <button type="button" class="seg-btn" data-type="retiro">Retiro</button>
+        </div>
+        <label><span>Monto</span><input type="number" step="0.01" min="0.01" id="input-saving-amount" required></label>
+        <label><span>Nota (opcional)</span><input type="text" id="input-saving-note" placeholder="Ej. Ahorro de la quincena"></label>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary modal-cancel">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
