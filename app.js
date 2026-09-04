@@ -127,9 +127,9 @@ function bindEvents() {
   document.getElementById("form-supplier").addEventListener("submit", handleCreateSupplier);
   document.getElementById("form-supply").addEventListener("submit", handleCreateSupply);
 
-  document.querySelectorAll(".seg-btn").forEach(btn => {
+  document.querySelectorAll("#saving-type-toggle .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".seg-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll("#saving-type-toggle .seg-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       savingType = btn.dataset.type;
     });
