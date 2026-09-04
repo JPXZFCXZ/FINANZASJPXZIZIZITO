@@ -264,6 +264,28 @@ input:focus, select:focus {
 }
 .action-btn:hover { border-color: var(--supply); color: var(--supply); }
 
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.icon-action {
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; padding: 4px 6px; border-radius: 6px;
+  color: var(--ink-soft);
+  transition: background .15s var(--ease), color .15s var(--ease);
+}
+.icon-action:hover { background: var(--bg); color: var(--ink); }
+.icon-action.danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+.danger-link {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-soft); font-size: 13px;
+  text-decoration: underline; text-underline-offset: 3px;
+  padding: 8px 4px;
+  transition: color .15s var(--ease);
+}
+.danger-link:hover { color: var(--danger); }
+
+.chart-card { margin-top: 20px; padding: 4px 20px 20px; }
+.chart-card canvas { margin-top: 10px; }
+
 .badge-cheapest {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 11px; font-weight: 700; color: var(--accent);
@@ -355,6 +377,8 @@ input:focus, select:focus {
   transition: transform .12s var(--ease), border-color .12s var(--ease);
 }
 .cal-day:hover { transform: scale(1.05); }
+.cal-day.not-scheduled { cursor: default; opacity: .4; }
+.cal-day.not-scheduled:hover { transform: none; }
 .cal-day.empty { visibility: hidden; cursor: default; }
 .cal-day.today { border-color: var(--ink); }
 .cal-day.scheduled { background: var(--warn-soft); }
