@@ -52,6 +52,12 @@
         <button class="nav-item" id="nav-gym" data-view="gym">
           <span class="nav-dot dot-gym"></span> Gym
         </button>
+        <button class="nav-item" id="nav-calx" data-view="calx">
+          <span class="nav-dot dot-calx"></span> CALX
+        </button>
+        <button class="nav-item" id="nav-notes" data-view="notes">
+          <span class="nav-dot dot-notes"></span> Notas
+        </button>
       </nav>
 
       <div class="nav-label">Mis negocios</div>
@@ -137,6 +143,102 @@
               <span><i class="dot dot-done"></i> Cumplido</span>
               <span><i class="dot dot-missed"></i> Faltaste</span>
               <span><i class="dot dot-pending"></i> Programado</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Vista: CALX -->
+      <section id="view-calx" class="view hidden">
+        <header class="view-header">
+          <div>
+            <h2>CALX</h2>
+            <p class="view-sub">Calculadora con notas — cada operación se queda con su contexto.</p>
+          </div>
+        </header>
+
+        <div class="calx-layout">
+          <div class="table-card calx-card">
+            <div class="calx-screen">
+              <div class="calx-expr" id="calx-expr">0</div>
+            </div>
+            <div class="calx-keypad">
+              <button class="calx-key calx-op" data-key="clear">C</button>
+              <button class="calx-key calx-op" data-key="backspace">⌫</button>
+              <button class="calx-key calx-op" data-key="%">%</button>
+              <button class="calx-key calx-op" data-key="/">÷</button>
+
+              <button class="calx-key" data-key="7">7</button>
+              <button class="calx-key" data-key="8">8</button>
+              <button class="calx-key" data-key="9">9</button>
+              <button class="calx-key calx-op" data-key="*">×</button>
+
+              <button class="calx-key" data-key="4">4</button>
+              <button class="calx-key" data-key="5">5</button>
+              <button class="calx-key" data-key="6">6</button>
+              <button class="calx-key calx-op" data-key="-">−</button>
+
+              <button class="calx-key" data-key="1">1</button>
+              <button class="calx-key" data-key="2">2</button>
+              <button class="calx-key" data-key="3">3</button>
+              <button class="calx-key calx-op" data-key="+">+</button>
+
+              <button class="calx-key" data-key="0" style="grid-column: span 2;">0</button>
+              <button class="calx-key" data-key=".">.</button>
+              <button class="calx-key calx-equals" data-key="=">=</button>
+            </div>
+
+            <div class="calx-note-row">
+              <input type="text" id="calx-note-input" placeholder="Nota para esta operación (opcional)">
+              <button class="btn-primary" id="calx-save-btn" style="width:auto;">Guardar</button>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="table-card-title">Historial</div>
+            <div id="calx-history-list" class="calx-history-list"></div>
+            <p class="empty-state" id="calx-empty">Tus operaciones guardadas van a aparecer aquí.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Vista: NOTAS -->
+      <section id="view-notes" class="view hidden">
+        <div class="notes-layout" id="notes-layout">
+          <div class="notes-list-pane">
+            <div class="notes-list-header">
+              <input type="text" id="notes-search" placeholder="Buscar notas...">
+              <select id="notes-folder-filter"><option value="">Todas las carpetas</option></select>
+              <button class="btn-primary" id="new-note-btn" style="width:auto;">+ Nueva</button>
+            </div>
+            <div id="notes-list" class="notes-list"></div>
+            <p class="empty-state" id="notes-empty">No tienes notas todavía.</p>
+          </div>
+
+          <div class="notes-editor-pane" id="notes-editor-pane">
+            <div class="notes-editor-empty" id="notes-editor-empty">
+              <p>Selecciona una nota o crea una nueva.</p>
+            </div>
+            <div class="notes-editor" id="notes-editor" style="display:none;">
+              <div class="notes-editor-top">
+                <button class="icon-btn notes-back-btn" id="notes-back-btn">‹</button>
+                <input type="text" id="note-folder-input" class="note-folder-input" placeholder="Carpeta">
+                <button class="icon-action" id="note-pin-btn" title="Fijar">📌</button>
+                <button class="icon-action danger" id="note-delete-btn" title="Eliminar">🗑</button>
+              </div>
+              <div class="notes-toolbar">
+                <button type="button" class="toolbar-btn" data-cmd="bold"><b>B</b></button>
+                <button type="button" class="toolbar-btn" data-cmd="italic"><i>I</i></button>
+                <button type="button" class="toolbar-btn" data-cmd="underline"><u>U</u></button>
+                <button type="button" class="toolbar-btn" data-cmd="strikeThrough"><s>S</s></button>
+                <span class="toolbar-sep"></span>
+                <button type="button" class="toolbar-btn" data-cmd="formatBlock" data-value="H2">Título</button>
+                <button type="button" class="toolbar-btn" data-cmd="insertUnorderedList">• Lista</button>
+                <button type="button" class="toolbar-btn" data-cmd="insertOrderedList">1. Lista</button>
+                <button type="button" class="toolbar-btn" id="checklist-btn">☑ Pendiente</button>
+              </div>
+              <div id="note-content" class="note-content" contenteditable="true" spellcheck="false"></div>
+              <p class="note-saved-hint" id="note-saved-hint">Se guarda automático</p>
             </div>
           </div>
         </div>
