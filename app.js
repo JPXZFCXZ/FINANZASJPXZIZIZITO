@@ -22,6 +22,11 @@ let editingSupplierId = null;
 let editingSupplyId = null;
 let editingSavingId = null;
 let profitChartInstance = null;
+let calxHistory = [];
+let calxExpr = "0";
+let notesList = [];
+let currentNoteId = null;
+let noteSaveTimeout = null;
 
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -56,6 +61,8 @@ async function enterApp() {
   await loadBusinesses();
   await loadSavings();
   await loadGymData();
+  await loadCalxHistory();
+  await loadNotes();
   renderSidebar();
   showView("savings");
 }
@@ -107,6 +114,8 @@ function bindEvents() {
 
   document.getElementById("nav-savings").addEventListener("click", () => showView("savings"));
   document.getElementById("nav-gym").addEventListener("click", () => showView("gym"));
+  document.getElementById("nav-calx").addEventListener("click", () => showView("calx"));
+  document.getElementById("nav-notes").addEventListener("click", () => showView("notes"));
 
   document.getElementById("new-business-btn").addEventListener("click", () => openModal("modal-business"));
   document.getElementById("empty-new-business-btn").addEventListener("click", () => openModal("modal-business"));
@@ -149,6 +158,38 @@ function bindEvents() {
   document.getElementById("form-supplier").addEventListener("submit", handleSaveSupplier);
   document.getElementById("form-supply").addEventListener("submit", handleSaveSupply);
   document.getElementById("form-routine").addEventListener("submit", handleCreateRoutine);
+
+  // CALX
+  document.querySelectorAll(".calx-key").forEach(btn => {
+    btn.addEventListener("click", () => handleCalxKey(btn.dataset.key));
+  });
+  document.getElementById("calx-save-btn").addEventListener("click", saveCalxEntry);
+
+  // Notas
+  document.getElementById("new-note-btn").addEventListener("click", createNewNote);
+  document.getElementById("notes-back-btn").addEventListener("click", () => {
+    document.getElementById("notes-layout").classList.remove("show-editor");
+  });
+  document.getElementById("notes-search").addEventListener("input", renderNotesList);
+  document.getElementById("notes-folder-filter").addEventListener("change", renderNotesList);
+  document.getElementById("note-pin-btn").addEventListener("click", toggleCurrentNotePin);
+  document.getElementById("note-delete-btn").addEventListener("click", deleteCurrentNote);
+  document.getElementById("note-folder-input").addEventListener("input", () => scheduleNoteSave());
+  document.getElementById("note-content").addEventListener("input", () => scheduleNoteSave());
+  document.querySelectorAll(".toolbar-btn[data-cmd]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("note-content").focus();
+      document.execCommand(btn.dataset.cmd, false, btn.dataset.value || null);
+      scheduleNoteSave();
+    });
+  });
+  document.getElementById("checklist-btn").addEventListener("click", insertChecklistItem);
+  document.getElementById("note-content").addEventListener("click", (e) => {
+    if (e.target.matches('.checklist-item input[type="checkbox"]')) {
+      e.target.closest(".checklist-item").classList.toggle("checked", e.target.checked);
+      scheduleNoteSave();
+    }
+  });
 
   document.querySelectorAll("#saving-type-toggle .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -216,6 +257,8 @@ function showView(view, businessId = null) {
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
   document.getElementById("view-savings").classList.add("hidden");
   document.getElementById("view-gym").classList.add("hidden");
+  document.getElementById("view-calx").classList.add("hidden");
+  document.getElementById("view-notes").classList.add("hidden");
   document.getElementById("view-business").classList.add("hidden");
   document.getElementById("view-empty").classList.add("hidden");
 
@@ -227,6 +270,14 @@ function showView(view, businessId = null) {
     document.getElementById("nav-gym").classList.add("active");
     document.getElementById("view-gym").classList.remove("hidden");
     renderGym();
+  } else if (view === "calx") {
+    document.getElementById("nav-calx").classList.add("active");
+    document.getElementById("view-calx").classList.remove("hidden");
+    renderCalxHistory();
+  } else if (view === "notes") {
+    document.getElementById("nav-notes").classList.add("active");
+    document.getElementById("view-notes").classList.remove("hidden");
+    renderNotesList();
   } else if (view === "business") {
     currentBusinessId = businessId;
     const navEl = document.querySelector(`[data-business-id="${businessId}"]`);
@@ -1080,6 +1131,229 @@ async function toggleAttendance(dateStr) {
       .upsert({ user_id: currentUser.id, log_date: dateStr, attended: gymLogs[dateStr] }, { onConflict: "user_id,log_date" });
     if (error) console.error(error);
   }
+}
+
+// ============================================
+// CALX: calculadora con notas
+// ============================================
+async function loadCalxHistory() {
+  const { data, error } = await supabaseClient
+    .from("calc_entries").select("*").eq("user_id", currentUser.id)
+    .order("created_at", { ascending: false });
+  if (error) { console.error(error); return; }
+  calxHistory = data || [];
+}
+
+function handleCalxKey(key) {
+  const display = document.getElementById("calx-expr");
+  if (key === "clear") {
+    calxExpr = "0";
+  } else if (key === "backspace") {
+    calxExpr = calxExpr.length > 1 ? calxExpr.slice(0, -1) : "0";
+  } else if (key === "=") {
+    calxExpr = String(evaluateCalx(calxExpr));
+  } else {
+    if (calxExpr === "0" && !["+","-","*","/","%"].includes(key)) {
+      calxExpr = key;
+    } else {
+      calxExpr += key;
+    }
+  }
+  display.textContent = calxExpr;
+}
+
+function evaluateCalx(expr) {
+  // Solo permitimos dígitos y operadores básicos — nunca texto libre
+  const safe = expr.replace(/[^0-9+\-*/.%()]/g, "");
+  const withPercent = safe.replace(/(\d+(\.\d+)?)%/g, "($1/100)");
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = Function('"use strict"; return (' + withPercent + ")")();
+    if (typeof result !== "number" || !isFinite(result)) return "Error";
+    return Math.round(result * 1e6) / 1e6;
+  } catch {
+    return "Error";
+  }
+}
+
+async function saveCalxEntry() {
+  if (calxExpr === "0" || calxExpr === "Error") return;
+  const result = evaluateCalx(calxExpr);
+  if (result === "Error") { alert("Operación inválida."); return; }
+  const note = document.getElementById("calx-note-input").value.trim();
+
+  const { data, error } = await supabaseClient
+    .from("calc_entries")
+    .insert({ user_id: currentUser.id, expression: calxExpr, result, note })
+    .select()
+    .single();
+  if (error) { alert("No se pudo guardar: " + error.message); return; }
+  calxHistory.unshift(data);
+  document.getElementById("calx-note-input").value = "";
+  renderCalxHistory();
+}
+
+function renderCalxHistory() {
+  const list = document.getElementById("calx-history-list");
+  document.getElementById("calx-empty").classList.toggle("hidden", calxHistory.length > 0);
+  list.innerHTML = calxHistory.map(h => `
+    <div class="calx-history-item">
+      <div class="calx-history-main">
+        <span class="calx-history-expr">${escapeHtml(h.expression)} =</span>
+        <span class="calx-history-result">${h.result}</span>
+        ${h.note ? `<span class="calx-history-note">${escapeHtml(h.note)}</span>` : ""}
+      </div>
+      <button class="icon-action danger" data-delete-calx="${h.id}" title="Eliminar">🗑</button>
+    </div>
+  `).join("");
+
+  list.querySelectorAll("[data-delete-calx]").forEach(btn => {
+    btn.addEventListener("click", () => deleteCalxEntry(btn.dataset.deleteCalx));
+  });
+}
+
+async function deleteCalxEntry(id) {
+  const { error } = await supabaseClient.from("calc_entries").delete().eq("id", id);
+  if (error) { alert("No se pudo eliminar: " + error.message); return; }
+  calxHistory = calxHistory.filter(h => h.id !== id);
+  renderCalxHistory();
+}
+
+// ============================================
+// NOTAS (tipo Apple Notes)
+// ============================================
+async function loadNotes() {
+  const { data, error } = await supabaseClient
+    .from("notes").select("*").eq("user_id", currentUser.id)
+    .order("pinned", { ascending: false })
+    .order("updated_at", { ascending: false });
+  if (error) { console.error(error); return; }
+  notesList = data || [];
+}
+
+function stripHtml(html) {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  return div.textContent || "";
+}
+
+function renderNotesList() {
+  const search = document.getElementById("notes-search").value.trim().toLowerCase();
+  const folderFilter = document.getElementById("notes-folder-filter").value;
+
+  // Actualiza el dropdown de carpetas con las que existan
+  const folderSelect = document.getElementById("notes-folder-filter");
+  const currentFolders = [...new Set(notesList.map(n => n.folder || "General"))];
+  const prevValue = folderSelect.value;
+  folderSelect.innerHTML = `<option value="">Todas las carpetas</option>` +
+    currentFolders.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join("");
+  folderSelect.value = prevValue;
+
+  let filtered = notesList;
+  if (folderFilter) filtered = filtered.filter(n => (n.folder || "General") === folderFilter);
+  if (search) {
+    filtered = filtered.filter(n =>
+      n.title.toLowerCase().includes(search) || stripHtml(n.content).toLowerCase().includes(search)
+    );
+  }
+
+  const listEl = document.getElementById("notes-list");
+  document.getElementById("notes-empty").classList.toggle("hidden", filtered.length > 0);
+  listEl.innerHTML = filtered.map(n => {
+    const preview = stripHtml(n.content).slice(0, 60) || "Sin contenido";
+    return `<div class="note-list-item ${n.id === currentNoteId ? 'active' : ''}" data-note-id="${n.id}">
+      <div class="nl-title">${n.pinned ? '📌' : ''} ${escapeHtml(n.title || "Nueva nota")}</div>
+      <div class="nl-preview">${escapeHtml(preview)}</div>
+      <div class="nl-meta">${escapeHtml(n.folder || "General")} · ${formatDate(n.updated_at)}</div>
+    </div>`;
+  }).join("");
+
+  listEl.querySelectorAll(".note-list-item").forEach(item => {
+    item.addEventListener("click", () => openNote(item.dataset.noteId));
+  });
+}
+
+function openNote(id) {
+  const note = notesList.find(n => n.id === id);
+  if (!note) return;
+  currentNoteId = id;
+  document.getElementById("notes-editor-empty").style.display = "none";
+  document.getElementById("notes-editor").style.display = "flex";
+  document.getElementById("note-folder-input").value = note.folder || "General";
+  document.getElementById("note-content").innerHTML = note.content || "";
+  document.getElementById("note-pin-btn").classList.toggle("active", !!note.pinned);
+  document.getElementById("notes-layout").classList.add("show-editor");
+  renderNotesList();
+}
+
+async function createNewNote() {
+  const { data, error } = await supabaseClient
+    .from("notes")
+    .insert({ user_id: currentUser.id, title: "Nueva nota", content: "", folder: "General" })
+    .select()
+    .single();
+  if (error) { alert("No se pudo crear la nota: " + error.message); return; }
+  notesList.unshift(data);
+  openNote(data.id);
+  document.getElementById("note-content").focus();
+}
+
+function scheduleNoteSave() {
+  clearTimeout(noteSaveTimeout);
+  noteSaveTimeout = setTimeout(saveCurrentNote, 700);
+}
+
+async function saveCurrentNote() {
+  if (!currentNoteId) return;
+  const content = document.getElementById("note-content").innerHTML;
+  const folder = document.getElementById("note-folder-input").value.trim() || "General";
+  const plainText = stripHtml(content).trim();
+  const title = plainText.slice(0, 40) || "Nueva nota";
+
+  const { data, error } = await supabaseClient
+    .from("notes")
+    .update({ title, content, folder, updated_at: new Date().toISOString() })
+    .eq("id", currentNoteId)
+    .select()
+    .single();
+  if (error) { console.error(error); return; }
+  const idx = notesList.findIndex(n => n.id === currentNoteId);
+  if (idx !== -1) notesList[idx] = data;
+  renderNotesList();
+}
+
+async function toggleCurrentNotePin() {
+  if (!currentNoteId) return;
+  const note = notesList.find(n => n.id === currentNoteId);
+  const newPinned = !note.pinned;
+  const { data, error } = await supabaseClient
+    .from("notes").update({ pinned: newPinned }).eq("id", currentNoteId).select().single();
+  if (error) { alert("No se pudo actualizar: " + error.message); return; }
+  const idx = notesList.findIndex(n => n.id === currentNoteId);
+  notesList[idx] = data;
+  notesList.sort((a, b) => (b.pinned - a.pinned) || (new Date(b.updated_at) - new Date(a.updated_at)));
+  document.getElementById("note-pin-btn").classList.toggle("active", newPinned);
+  renderNotesList();
+}
+
+async function deleteCurrentNote() {
+  if (!currentNoteId) return;
+  if (!confirm("¿Eliminar esta nota? No se puede deshacer.")) return;
+  const { error } = await supabaseClient.from("notes").delete().eq("id", currentNoteId);
+  if (error) { alert("No se pudo eliminar: " + error.message); return; }
+  notesList = notesList.filter(n => n.id !== currentNoteId);
+  currentNoteId = null;
+  document.getElementById("notes-editor").style.display = "none";
+  document.getElementById("notes-editor-empty").style.display = "flex";
+  document.getElementById("notes-layout").classList.remove("show-editor");
+  renderNotesList();
+}
+
+function insertChecklistItem() {
+  document.getElementById("note-content").focus();
+  const html = `<div class="checklist-item"><input type="checkbox"><span contenteditable="true">Pendiente</span></div>`;
+  document.execCommand("insertHTML", false, html);
+  scheduleNoteSave();
 }
 
 // ============================================
