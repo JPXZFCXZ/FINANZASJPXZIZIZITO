@@ -16,6 +16,10 @@
   --warn-soft: #FBEEDC;
   --danger: #DE7B68;        /* coral suave */
   --danger-soft: #FBE9E5;
+  --calx: #B15FA8;          /* CALX (berenjena/berry) */
+  --calx-soft: #F3E7F1;
+  --notes: #C7A23A;         /* Notas (dorado, como Apple Notes) */
+  --notes-soft: #F8F1DD;
 
   --sidebar: #23222B;
   --sidebar-text: #B9B8C4;
@@ -187,6 +191,8 @@ input:focus, select:focus {
 .nav-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .dot-savings { background: var(--savings); }
 .dot-gym { background: var(--warn); }
+.dot-calx { background: var(--calx); }
+.dot-notes { background: var(--notes); }
 
 .new-business-btn {
   margin-top: auto;
@@ -273,6 +279,7 @@ input:focus, select:focus {
 }
 .icon-action:hover { background: var(--bg); color: var(--ink); }
 .icon-action.danger:hover { background: var(--danger-soft); color: var(--danger); }
+.icon-action.active { background: var(--notes-soft); color: var(--notes); }
 
 .danger-link {
   background: none; border: none; cursor: pointer;
@@ -395,6 +402,98 @@ input:focus, select:focus {
 .dot-done { background: var(--accent); }
 .dot-missed { background: var(--danger); }
 .dot-pending { background: var(--warn); }
+
+/* ============ CALX ============ */
+.calx-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+.calx-card { padding: 20px; }
+
+.calx-screen {
+  background: var(--ink); border-radius: var(--radius-s);
+  padding: 22px 18px; margin-bottom: 14px;
+}
+.calx-expr {
+  color: white; font-size: 30px; font-weight: 700; text-align: right;
+  word-break: break-all; font-variant-numeric: tabular-nums;
+}
+
+.calx-keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.calx-key {
+  padding: 16px 0; border: none; border-radius: 10px;
+  background: var(--bg); color: var(--ink); font-size: 17px; font-weight: 600;
+  cursor: pointer; transition: transform .1s var(--ease), background .1s var(--ease);
+}
+.calx-key:active { transform: scale(.94); }
+.calx-key.calx-op { background: var(--calx-soft); color: var(--calx); }
+.calx-key.calx-equals { background: var(--calx); color: white; }
+
+.calx-note-row { display: flex; gap: 8px; margin-top: 14px; }
+.calx-note-row input { flex: 1; }
+
+.calx-history-list { padding: 0 20px 14px; display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto; }
+.calx-history-item {
+  background: var(--bg); border-radius: var(--radius-s); padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.calx-history-main { font-size: 13px; }
+.calx-history-expr { color: var(--ink-soft); display: block; }
+.calx-history-result { font-weight: 700; font-size: 16px; color: var(--calx); }
+.calx-history-note { font-size: 12px; color: var(--ink-soft); display: block; margin-top: 2px; font-style: italic; }
+
+/* ============ NOTAS ============ */
+.notes-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-m); overflow: hidden; min-height: 560px; }
+.notes-list-pane { background: var(--surface); display: flex; flex-direction: column; }
+.notes-list-header { padding: 16px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+.notes-list-header input, .notes-list-header select { font-size: 13px; padding: 9px 11px; }
+
+.notes-list { flex: 1; overflow-y: auto; }
+.note-list-item {
+  padding: 12px 16px; border-bottom: 1px solid #F1F1EF; cursor: pointer;
+  transition: background .12s var(--ease);
+}
+.note-list-item:hover { background: var(--bg); }
+.note-list-item.active { background: var(--notes-soft); }
+.note-list-item .nl-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.note-list-item .nl-preview { font-size: 12px; color: var(--ink-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-list-item .nl-meta { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+
+.notes-editor-pane { background: var(--surface); display: flex; flex-direction: column; }
+.notes-editor-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--ink-soft); font-size: 14px; }
+.notes-editor { display: flex; flex-direction: column; height: 100%; }
+.notes-editor-top { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.notes-back-btn { display: none; font-size: 20px; }
+.note-folder-input { flex: 1; border: none; background: none; font-size: 13px; font-weight: 600; color: var(--notes); padding: 6px; }
+.note-folder-input:focus { outline: none; background: var(--notes-soft); border-radius: 6px; }
+
+.notes-toolbar { display: flex; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.toolbar-btn {
+  border: none; background: var(--bg); color: var(--ink); font-size: 12px; font-weight: 600;
+  padding: 6px 10px; border-radius: 7px; cursor: pointer;
+  transition: background .12s var(--ease);
+}
+.toolbar-btn:hover { background: var(--notes-soft); color: var(--notes); }
+.toolbar-sep { width: 1px; background: var(--line); margin: 2px 4px; }
+
+.note-content {
+  flex: 1; padding: 18px 22px; font-size: 14px; line-height: 1.7; overflow-y: auto;
+  outline: none;
+}
+.note-content h2 { font-size: 19px; margin: 0 0 8px; }
+.note-content ul, .note-content ol { padding-left: 22px; }
+.note-content .checklist-item { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; }
+.note-content .checklist-item.checked span { text-decoration: line-through; color: var(--ink-soft); }
+.note-content .checklist-item input { margin-top: 4px; }
+
+.note-saved-hint { font-size: 11px; color: var(--ink-soft); padding: 6px 22px; margin: 0; border-top: 1px solid var(--line); }
+
+@media (max-width: 860px) {
+  .calx-layout { grid-template-columns: 1fr; }
+  .notes-layout { grid-template-columns: 1fr; min-height: 0; }
+  .notes-list-pane { display: flex; }
+  .notes-editor-pane { display: none; }
+  .notes-back-btn { display: inline-block; }
+  #notes-layout.show-editor .notes-list-pane { display: none; }
+  #notes-layout.show-editor .notes-editor-pane { display: flex; }
+}
 
 table { width: 100%; border-collapse: collapse; }
 th {
